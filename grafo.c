@@ -161,34 +161,78 @@ void imprimirCaminhoMaisCurto(lista** grafo, int origem, int destino, int* visit
   }
 }
 
-void imprimirCaminhoMenorCusto(lista** grafo, int origem, int destino, int* visitados, int custoAtual, int custoMinimo, int* custoMenor) {
-  visitados[origem] = 1;
-
-  if (origem == destino) {
-    if (custoAtual < *custoMenor) {
-      *custoMenor = custoAtual;
-    }
-  } else {
-    lista* atual = grafo[origem];
-    while (atual != NULL) {
-      if (!visitados[atual->destino]) {
-        int novoCusto = custoAtual + atual->custo;
-        if (novoCusto < custoMinimo) {
-          imprimirCaminhoMenorCusto(grafo, atual->destino, destino, visitados, novoCusto, custoMinimo, custoMenor);
-        }
-      }
-      atual = atual->prox;
-    }
+int custoAresta(lista **g, int a, int b){
+  lista *p = g[a];
+  while(p != NULL){
+    if(p->destino == b)
+      return p->custo;
+    p = p->prox;
   }
-
-  visitados[origem] = 0;
+  return -1;
 }
 
+int calculaCusto(lista **g, int *vet, int n){
+  int i, custo = 0;
+  for(i=1; i<n; i++)
+    custo += custoAresta(g, vet[i-1], vet[i]);
+  return custo;
+}
+
+int existe(int *vet, int valor, int n){
+  int i;
+  for(i = 0; i < n; i++)
+    if(vet[i] == valor)
+      return 1;
+  return 0;
+}
+
+void menorCusto (lista **g, int destino, int *vetor, int posicao, int *atual, int custo,int *minimo,int *tamanho) {
+  if (vetor[posicao-1] == destino) 
+  {
+    if (*minimo > custo) 
+    {
+      *tamanho = posicao;
+      *minimo = custo;
+      for (int i = 0; i < posicao; i++) 
+      {
+        atual[i] = vetor[i];
+      }
+    }
+      
+  } 
+  else 
+  {
+    custo = 0;
+    lista *p = g[vetor[posicao-1]];
+    while (p != NULL) 
+    {
+      if (!existe(vetor,p->destino,posicao)) 
+      {
+        vetor[posicao] = p->destino;
+        custo = custo + p->custo;
+        menorCusto(g, destino, vetor, posicao+1, atual, custo, minimo, tamanho);
+      }
+      p = p->prox;
+    }
+  }
+}
+
+void imprimirMenorCusto (lista **g,int destino, int *vetor, int posicao, int *atual, int custo, int *minimo, int *tamanho) 
+{
+  menorCusto(g, destino, vetor, posicao, atual, custo, minimo, tamanho);
+  for (int i = 0; i < *tamanho; i++) 
+  {
+    printf("%d ", atual[i]);
+  }
+}
+
+
 int main() {
-  int* vet, n;
+  int *vet, n;
   int orig, dest, custo;
   lista** g;
   int opt;
+  int *menorCusto = (int*)900;
 
   printf("Qual a quantidade de vértices do grafo?\n");
   scanf("%d", &n);
@@ -262,14 +306,19 @@ int main() {
         free(distancias);
         break;
       case 8:
+        {
+          int *atual;
+          int minimo = 1000000;
+          int tam;
+          atual = (int*) malloc(n *sizeof(int));
         printf("Digite a origem: ");
         scanf("%d", &orig);
         printf("Digite o destino: ");
         scanf("%d", &dest);
-        int custoMenor = INT_MAX;
-        imprimirCaminhoMenorCusto(g, orig, dest, vet, 0, 0, &custoMenor);
-        printf("Custo mínimo: %d\n", custoMenor);
+        vet[0] = orig;
+        imprimirMenorCusto(g, dest, vet, 1, atual, custo, &minimo, &tam);
         break;
+        }
       case 9:
         printf("Encerrando o programa.\n");
         break;
