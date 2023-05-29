@@ -1,181 +1,200 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <limits.h>
-#include <string.h>
 
 typedef struct lista {
   int destino;
   int custo;
-  struct lista *prox;
+  struct lista* prox;
 } lista;
 
-void inicializar(lista **g, int n) {
-  int i;
-  for (i = 0; i <= n; i++)
-    g[i] = NULL;
-}
-
-int existe(lista *vet, int valor) {
-  while (vet != NULL) {
-    if (vet->destino == valor)
-      return 1;
-    vet = vet->prox;
-  }
-  return 0;
-}
-
-lista *inserirLista(lista *l, int d, int c) {
-  lista *no = (lista *)malloc(sizeof(lista));
-  no->destino = d;
-  no->custo = c;
-  no->prox = l;
-  return no;
-}
-
-void inserirAresta(lista **g, int origem, int destino, int custo) {
-  if (!existe(g[origem], destino)) {
-    g[origem] = inserirLista(g[origem], destino, custo);
-  } else {
-    printf("Aresta entre %d e %d já existe.\n", origem, destino);
+void inicializar(lista** grafo, int n) {
+  for (int i = 0; i <= n; i++) {
+    grafo[i] = NULL;
   }
 }
 
-void removerAresta(lista **g, int origem, int destino) {
-  lista *p = g[origem];
-  lista *ant = NULL;
-  while (p != NULL) {
-    if (p->destino == destino) {
-      if (ant == NULL) {
-        g[origem] = p->prox;
+void inserirAresta(lista** grafo, int origem, int destino, int custo) {
+  lista* novoNo = (lista*)malloc(sizeof(lista));
+  novoNo->destino = destino;
+  novoNo->custo = custo;
+  novoNo->prox = grafo[origem];
+  grafo[origem] = novoNo;
+}
+
+void removerAresta(lista** grafo, int origem, int destino) {
+  lista* atual = grafo[origem];
+  lista* anterior = NULL;
+
+  while (atual != NULL) {
+    if (atual->destino == destino) {
+      if (anterior == NULL) {
+        grafo[origem] = atual->prox;
       } else {
-        ant->prox = p->prox;
+        anterior->prox = atual->prox;
       }
-      free(p);
-      printf("Aresta entre %d e %d removida.\n", origem, destino);
+      free(atual);
       return;
     }
-    ant = p;
-    p = p->prox;
-  }
-  printf("Aresta entre %d e %d não encontrada.\n", origem, destino);
-}
-
-void imprimirLista(lista *l) {
-  if (l != NULL) {
-    printf("-(%d, %d)", l->destino, l->custo);
-    imprimirLista(l->prox);
+    anterior = atual;
+    atual = atual->prox;
   }
 }
 
-void imprimirGrafo(lista **g, int n) {
-  int i;
-  printf("Grafo: ");
-  for (i = 1; i <= n; i++) {
-    printf("\n\t%d", i);
-    imprimirLista(g[i]);
-  }
-}
-
-void caminhos(lista **g, int origem, int destino, int *vet, int pos, int *visitados) {
-  if (origem == destino) {
-    int i;
+void imprimirGrafo(lista** grafo, int n) {
+  for (int i = 1; i <= n; i++) {
+    printf("Vértice %d:", i);
+    lista* atual = grafo[i];
+    while (atual != NULL) {
+      printf(" -> (%d, %d)", atual->destino, atual->custo);
+      atual = atual->prox;
+    }
     printf("\n");
-    for (i = 0; i < pos-1; i++) {
-      printf("%d ", vet[i]);
-    }
-    printf("%d ", destino);
-  } else {
-    lista *p = g[origem];
-    visitados[origem] = 1;
-    while (p != NULL) {
-      if (!visitados[p->destino]) {
-        vet[pos] = p->destino;
-        caminhos(g, p->destino, destino, vet, pos + 1, visitados);
+  }
+}
+
+int grauEntrada(lista** grafo, int vertice, int n) {
+  int grau = 0;
+  for (int i = 1; i <= n; i++) {
+    lista* atual = grafo[i];
+    while (atual != NULL) {
+      if (atual->destino == vertice) {
+        grau++;
       }
-      p = p->prox;
+      atual = atual->prox;
     }
-    visitados[origem] = 0; // Restaurar o valor original do vértice visitado
   }
+  return grau;
 }
 
-int grauEntrada(lista **g, int v, int n) {
-  int i, count = 0;
-  for (i = 1; i <= n; i++) {
-    if (existe(g[i], v))
-      count++;
+int grauSaida(lista* listaAdj) {
+  int grau = 0;
+  lista* atual = listaAdj;
+  while (atual != NULL) {
+    grau++;
+    atual = atual->prox;
   }
-  return count;
+  return grau;
 }
 
-int grauSaida(lista *l) {
-  int count = 0;
-  while (l != NULL) {
-    count++;
-    l = l->prox;
-  }
-  return count;
-}
-
-int verificaCompleto(lista **g, int n) {
-  int i, j;
-  for (i = 1; i <= n; i++) {
-    for (j = 1; j <= n; j++) {
-      if (i != j && !existe(g[i], j))
-        return 0;
+int verificaCompleto(lista** grafo, int n) {
+  for (int i = 1; i <= n; i++) {
+    if (grauSaida(grafo[i]) != n - 1) {
+      return 0;
     }
   }
   return 1;
 }
 
-void imprimirCaminhoMaisCurto(lista **g, int origem, int destino, int *caminho, int pos) {
-  if(origem == destino) {
-    caminho[pos] = origem;
-    int i;
-    for(i = 0; i <= pos; i++)
-      printf("%d ", caminho[i]);
+void caminhos(lista** grafo, int origem, int destino, int* visitados, int pos, int* caminho) {
+  visitados[origem] = 1;
+  caminho[pos++] = origem;
+
+  if (origem == destino) {
+    printf("%d", caminho[0]);
+    for (int i = 1; i < pos; i++) {
+      printf(" -> %d", caminho[i]);
+    }
     printf("\n");
-    return;
+  } else {
+    lista* atual = grafo[origem];
+    while (atual != NULL) {
+      if (!visitados[atual->destino]) {
+        caminhos(grafo, atual->destino, destino, visitados, pos, caminho);
+      }
+      atual = atual->prox;
+    }
   }
-  lista *p = g[origem];
-  caminho[pos] = origem;
-  int caminhoMaisCurto = INT_MAX;  // Variável para armazenar o tamanho do caminho mais curto
-  while(p != NULL) {
-    imprimirCaminhoMaisCurto(g, p->destino, destino, caminho, pos + 1);
-    p = p->prox;
+
+  visitados[origem] = 0;
+}
+
+void imprimirCaminhoMaisCurto(lista** grafo, int origem, int destino, int* visitados, int* distancias, int n) {
+  for (int i = 1; i <= n; i++) {
+    visitados[i] = 0;
+    distancias[i] = INT_MAX;
+  }
+
+  visitados[origem] = 1;
+  distancias[origem] = 0;
+
+  int fila[n];
+  int inicio = 0, fim = 0;
+  fila[fim++] = origem;
+
+  while (inicio != fim) {
+    int vertice = fila[inicio++];
+    lista* atual = grafo[vertice];
+    while (atual != NULL) {
+      if (!visitados[atual->destino]) {
+        fila[fim++] = atual->destino;
+        visitados[atual->destino] = 1;
+        distancias[atual->destino] = distancias[vertice] + 1;
+      }
+      atual = atual->prox;
+    }
+  }
+
+  if (distancias[destino] == INT_MAX) {
+    printf("Não existe caminho entre %d e %d.\n", origem, destino);
+  } else {
+    printf("Caminho mais curto: %d", origem);
+    int vertice = origem;
+    while (vertice != destino) {
+      lista* atual = grafo[vertice];
+      int proximo = -1;
+      while (atual != NULL) {
+        if (distancias[atual->destino] == distancias[vertice] + 1) {
+          proximo = atual->destino;
+          break;
+        }
+        atual = atual->prox;
+      }
+      if (proximo != -1) {
+        printf(" -> %d", proximo);
+        vertice = proximo;
+      } else {
+        break;
+      }
+    }
+    printf("\n");
   }
 }
 
-void imprimirCaminhoMenorCusto(lista **g, int origem, int destino, int *caminho, int pos, int custo_atual, int *custo_menor) {
-  if(origem == destino) {
-    caminho[pos] = origem;
-    int i;
-    for(i = 0; i <= pos; i++)
-      printf("%d ", caminho[i]);
-    printf("\n");
-    if(custo_atual < *custo_menor)
-      *custo_menor = custo_atual;
-    return;
+void imprimirCaminhoMenorCusto(lista** grafo, int origem, int destino, int* visitados, int custoAtual, int custoMinimo, int* custoMenor) {
+  visitados[origem] = 1;
+
+  if (origem == destino) {
+    if (custoAtual < *custoMenor) {
+      *custoMenor = custoAtual;
+    }
+  } else {
+    lista* atual = grafo[origem];
+    while (atual != NULL) {
+      if (!visitados[atual->destino]) {
+        int novoCusto = custoAtual + atual->custo;
+        if (novoCusto < custoMinimo) {
+          imprimirCaminhoMenorCusto(grafo, atual->destino, destino, visitados, novoCusto, custoMinimo, custoMenor);
+        }
+      }
+      atual = atual->prox;
+    }
   }
-  lista *p = g[origem];
-  caminho[pos] = origem;
-  int custoMenor = INT_MAX;  // Variável para armazenar o menor custo encontrado
-  while(p != NULL) {
-    imprimirCaminhoMenorCusto(g, p->destino, destino, caminho, pos + 1, custo_atual + p->custo, custo_menor);
-    p = p->prox;
-  }
+
+  visitados[origem] = 0;
 }
 
 int main() {
-  int *vet, n;
+  int* vet, n;
   int orig, dest, custo;
-  lista **g;
+  lista** g;
   int opt;
 
   printf("Qual a quantidade de vértices do grafo?\n");
   scanf("%d", &n);
 
-  g = (lista **)malloc((n + 1) * sizeof(lista *));
-  vet = (int *)malloc(n * sizeof(int));
+  g = (lista**)malloc((n + 1) * sizeof(lista*));
+  vet = (int*)malloc(n * sizeof(int));
 
   inicializar(g, n);
 
@@ -230,36 +249,46 @@ int main() {
         scanf("%d", &orig);
         printf("Digite o destino: ");
         scanf("%d", &dest);
-        int *visitados = (int *)calloc(n + 1, sizeof(int));
-        vet[0] = orig;
-        caminhos(g, orig, dest, vet, 1, visitados);
-        free(visitados);
+        printf("Caminhos possíveis:\n");
+        caminhos(g, orig, dest, vet, 0, vet);
         break;
       case 7:
         printf("Digite a origem: ");
         scanf("%d", &orig);
         printf("Digite o destino: ");
         scanf("%d", &dest);
-        int *caminhoMaisCurto = (int*) malloc(n * sizeof(int));
-        imprimirCaminhoMaisCurto(g, orig, dest, caminhoMaisCurto, 0);
-        free(caminhoMaisCurto);
+        int* distancias = (int*)malloc((n + 1) * sizeof(int));
+        imprimirCaminhoMaisCurto(g, orig, dest, vet, distancias, n);
+        free(distancias);
         break;
       case 8:
         printf("Digite a origem: ");
         scanf("%d", &orig);
         printf("Digite o destino: ");
         scanf("%d", &dest);
-        int *caminhoMenorCusto = (int*) malloc(n * sizeof(int));
         int custoMenor = INT_MAX;
-        imprimirCaminhoMenorCusto(g, orig, dest, caminhoMenorCusto, 0, 0, &custoMenor);
+        imprimirCaminhoMenorCusto(g, orig, dest, vet, 0, 0, &custoMenor);
         printf("Custo mínimo: %d\n", custoMenor);
-        free(caminhoMenorCusto);
+        break;
+      case 9:
+        printf("Encerrando o programa.\n");
+        break;
+      default:
+        printf("Opção inválida.\n");
         break;
     }
   } while (opt != 9);
 
-  free(g);
   free(vet);
+  for (int i = 0; i <= n; i++) {
+    lista* atual = g[i];
+    while (atual != NULL) {
+      lista* prox = atual->prox;
+      free(atual);
+      atual = prox;
+    }
+  }
+  free(g);
 
   return 0;
 }
